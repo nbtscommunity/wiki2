@@ -6,15 +6,14 @@ module.exports = function pathWalk(hashish, path, cb) {
     this.load(hashish)(inner.bind(this, paths));
 
     function inner(paths, err, obj) {
+        var ent;
         if (err) return cb(err);
 
         if (obj.type == 'commit') return this.load(obj.body.tree)(inner.bind(this, paths));
 
         if (obj.type == 'tree') {
             if (!paths[0]) return cb(null, obj);
-            var ent;
-            if (ent = obj.body.reduce(function (_, e) { return _ ? _ : e.name == paths[0] ? e.hash : null; })) {
-                console.log('hash', ent.hash);
+            if (ent = find(obj.body, function (e) { return e.name == paths[0]; })) {
                 return this.load(ent.hash)(inner.bind(this, paths.slice(1)));
             } else {
                 return cb("ENOENT");
@@ -25,3 +24,9 @@ module.exports = function pathWalk(hashish, path, cb) {
         }
     }
 };
+
+function find(arr, cb) {
+    for (var i in arr) {
+        if (cb(arr[i])) return arr[i];
+    }
+}
