@@ -1,8 +1,14 @@
-var repo = require('git-node').repo('pages.git');
+var platform = require('git-node-platform');
+var fsDb = require('git-fs-db')(platform);
+var jsGit = require('js-git');
+
+var repo = jsGit(fsDb(platform.fs('pages.git')));
+
 var util = require('util');
 var url = require('url');
 var pathWalk = require('./pathwalk');
 var markdown = require( "markdown" ).markdown;
+var concat = require('concat-stream');
 
 require('http').createServer(function (req, res) {
     var u = url.parse(req.url);
