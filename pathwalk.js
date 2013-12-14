@@ -1,28 +1,36 @@
-module.exports = function pathWalk(hashish, path, cb) {
-    if (!cb) return pathWalk.bind(this, hashish, path);
+module.exports = function pathWalk(hash, path, cb) {
+    if (!cb) return pathWalk.bind(this, hash, path);
 
-    var paths = path.split('/');
+    if (typeof path == 'string') path = path.split('/');
 
-    this.load(hashish)(inner.bind(this, paths));
+    var self = this;
 
-    function inner(paths, err, obj) {
+    this.load(hash, function (err, obj) {
         var ent;
         if (err) return cb(err);
 
-        if (obj.type == 'commit') return this.load(obj.body.tree)(inner.bind(this, paths));
+        if (!path[0]) return cb(null, obj, finish);
 
         if (obj.type == 'tree') {
-            if (!paths[0]) return cb(null, obj);
-            if (ent = find(obj.body, function (e) { return e.name == paths[0]; })) {
-                return this.load(ent.hash)(inner.bind(this, paths.slice(1)));
+            if (ent = find(obj.body, function (e) { return e.name == path[0]; })) {
+                return pathWalk.call(self, ent.hash, path.slice(1), cb);
             } else {
                 return cb("ENOENT");
             }
         } else {
-            if (!paths[0]) return cb(null, obj);
-            return cb("ENOENT");
+            if (!path[0]) {
+                var result = cb(null, obj, next);
+                if (typeof result == 'undefined') {
+                }
+            } else {
+                return cb("ENOENT");
+            }
         }
-    }
+
+        function finish (replacement) {
+            console.log(arguments, obj, hash);
+        }
+    });
 };
 
 function find(arr, cb) {

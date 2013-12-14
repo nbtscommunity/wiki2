@@ -7,21 +7,61 @@ var markdown = require( "markdown" ).markdown;
 require('http').createServer(function (req, res) {
     var u = url.parse(req.url);
 
-    if (req.cgiHeaders) req.resume(); // Passenger is streams1. Kind-of.
+    if (req.cgiHeaders && req.cgiHeaders.SCRIPT_NAME) u.pathname = u.path = u.href = u.href.replace(new RegExp('^' + req.cgiHeaders.SCRIPT_NAME + '/'), '');
 
-    if (req.method == 'GET') {
-        if (req.cgiHeaders && req.cgiHeaders.SCRIPT_NAME) u.pathname = u.path = u.href = u.href.replace(new RegExp('^' + req.cgiHeaders.SCRIPT_NAME + '/'), '');
+    var last, lastHash;
 
-        pathWalk.call(repo, 'HEAD', u.pathname)(function (err, blob) {
-            if (err) return res.end(err);
-            if (blob.type != 'blob') {
-                res.end(util.inspect(blob));
+    repo.load('HEAD', function (err, head) {
+        if (err) return grump(err);
+        pathWalk.call(repo, head.body.tree, u.pathname)(function (err, obj, done) {
+            if (err) return grump(err);
+
+            if (obj.type == 'blob') {
+                if (req.method == 'GET') {
+                    res.setHeader('Content-Type', 'text/html');
+                    res.end(markdown.toHTML(obj.body.toString()));
+                } else {
+                    req.pipe(concat(function (data) {
+                        repo.saveAs('blob', data)(function (err, hash) {
+                            if (err) return grump(err);
+                            lastHash = hash;
+                            done();
+                        });
+                    }));
+                }
+            } else if (obj.type == 'tree') {
+                var done = false;
+                console.log('last', last, 'lastHash', lastHash);
+                for (var i in obj.body) {
+                    if (obj.body[i].name == last) {
+                        obj.body[i].hash = lastHash;
+                        done = true;
+                    }
+                }
+                if (!done) {
+                    obj.body.push({
+                        name: last,
+                        mode: 33188,
+                        hash: lastHash
+                    });
+                }
+
+                repo.saveAs('tree', obj)(function (err, hash) {
+                    if (err) return grump(err);
+                    lastHash = hash;
+                    done();
+                });
             } else {
-                res.setHeader('content-type', 'text/html');
-                res.end(markdown.toHTML(blob.body.toString()));
+                res.end();
+                done();
             }
         });
-    } else {
-        res.end('method not supported');
+
+    });
+
+    function grump(err) {
+        res.setHeader('Content-Type', 'text/plain');
+        res.statusCode = 500;
+        res.end(err instanceof Error ? err.stack : util.inspect(err));
     }
 }).listen('passenger');
