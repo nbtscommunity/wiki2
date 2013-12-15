@@ -1,4 +1,4 @@
-module.exports = function pathWalk(hash, path, cb) {
+module.exports = function pathWalk(hash, path, cb, up) {
     if (!cb) return pathWalk.bind(this, hash, path);
 
     if (typeof path == 'string') {
@@ -16,7 +16,7 @@ module.exports = function pathWalk(hash, path, cb) {
 
         if (obj.type == 'tree') {
             if (ent = find(obj.body, function (e) { return e.name == path[0]; })) {
-                return pathWalk.call(self, ent.hash, path.slice(1), cb);
+                return pathWalk.call(self, ent.hash, path.slice(1), cb, finish);
             } else {
                 return cb("ENOENT");
             }
@@ -32,6 +32,7 @@ module.exports = function pathWalk(hash, path, cb) {
 
         function finish (replacement) {
             console.log(arguments, obj, hash);
+            if (up) up(obj);
         }
     });
 };
