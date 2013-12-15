@@ -42,7 +42,6 @@ require('http').createServer(function (req, res) {
                 }
             } else if (obj.type == 'tree') {
                 var done = false;
-                console.log('last', last, 'lastHash', lastHash);
                 for (var i in obj.body) {
                     if (obj.body[i].name == last) {
                         obj.body[i].hash = lastHash;
