@@ -13,27 +13,32 @@ var concat = require('concat-stream');
 require('http').createServer(function (req, res) {
     var u = url.parse(req.url);
 
-    if (req.cgiHeaders && req.cgiHeaders.SCRIPT_NAME) u.pathname = u.path = u.href = u.href.replace(new RegExp('^' + req.cgiHeaders.SCRIPT_NAME + '/'), '');
+    if (req.cgiHeaders && req.cgiHeaders.SCRIPT_NAME) u.pathname = u.path = u.href = u.href.replace(new RegExp('^' + req.cgiHeaders.SCRIPT_NAME), '');
 
     var last, lastHash;
 
     repo.load('HEAD', function (err, head) {
         if (err) return grump(err);
-        pathWalk.call(repo, head.body.tree, u.pathname)(function (err, obj, done) {
+        pathWalk.call(repo, head.body.tree, u.pathname)(function (err, obj, finish) {
             if (err) return grump(err);
 
             if (obj.type == 'blob') {
-                if (req.method == 'GET') {
+                if (req.method.toUpperCase() == 'GET') {
                     res.setHeader('Content-Type', 'text/html');
-                    res.end(markdown.toHTML(obj.body.toString()));
-                } else {
+                    res.end(markdown.toHTML(obj.body.toString()) + '\n');
+                } else if (req.method.toUpperCase() == 'PUT') {
                     req.pipe(concat(function (data) {
                         repo.saveAs('blob', data)(function (err, hash) {
+                            console.log('data', data);
                             if (err) return grump(err);
                             lastHash = hash;
-                            done();
+                            res.setHeader('Content-Type', 'text/html');
+                            res.end(markdown.toHTML(data.toString()) + '\n');
+                            finish();
                         });
                     }));
+                } else {
+                    grump('method not implemented');
                 }
             } else if (obj.type == 'tree') {
                 var done = false;
@@ -44,6 +49,7 @@ require('http').createServer(function (req, res) {
                         done = true;
                     }
                 }
+
                 if (!done) {
                     obj.body.push({
                         name: last,
@@ -55,11 +61,11 @@ require('http').createServer(function (req, res) {
                 repo.saveAs('tree', obj)(function (err, hash) {
                     if (err) return grump(err);
                     lastHash = hash;
-                    done();
+                    finish();
                 });
             } else {
                 res.end();
-                done();
+                finish();
             }
         });
 

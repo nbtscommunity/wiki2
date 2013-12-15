@@ -1,7 +1,10 @@
 module.exports = function pathWalk(hash, path, cb) {
     if (!cb) return pathWalk.bind(this, hash, path);
 
-    if (typeof path == 'string') path = path.split('/');
+    if (typeof path == 'string') {
+        path = path.split('/');
+        path.shift();
+    }
 
     var self = this;
 
