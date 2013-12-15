@@ -12,27 +12,26 @@ module.exports = function pathWalk(hash, path, cb, up) {
         var ent;
         if (err) return cb(err);
 
-        if (!path[0]) return cb(null, obj, finish);
+        if (!path[0]) return cb(null, obj, up);
 
-        if (obj.type == 'tree') {
-            if (ent = find(obj.body, function (e) { return e.name == path[0]; })) {
-                return pathWalk.call(self, ent.hash, path.slice(1), cb, finish);
-            } else {
-                return cb("ENOENT");
-            }
+        if (obj.type == 'tree' && (ent = find(obj.body, function (e) { return e.name == path[0]; }))) {
+            return pathWalk.call(self, ent.hash, path.slice(1), cb, finish);
         } else {
-            if (!path[0]) {
-                var result = cb(null, obj, next);
-                if (typeof result == 'undefined') {
-                }
-            } else {
-                return cb("ENOENT");
-            }
+            return cb("ENOENT");
         }
 
-        function finish (replacement) {
-            console.log(arguments, obj, hash);
-            if (up) up(obj);
+        function finish (err, replacement) {
+            if (err) return up(err);
+            if (replacement) {
+                console.log('boom', arguments, obj, hash, replacement, obj.body[obj.body.indexOf(ent)]);
+                obj.body[obj.body.indexOf(ent)].hash = replacement;
+                self.saveAs('tree', obj.body, function (err, hash) {
+                    if (err) return up(err);
+                    up(null, hash);
+                });
+            } else {
+                up();
+            }
         }
     });
 };

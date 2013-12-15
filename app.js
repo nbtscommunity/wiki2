@@ -28,13 +28,12 @@ require('http').createServer(function (req, res) {
                     res.end(markdown.toHTML(obj.body.toString()) + '\n');
                 } else if (req.method.toUpperCase() == 'PUT') {
                     req.pipe(concat(function (data) {
-                        repo.saveAs('blob', data)(function (err, hash) {
-                            console.log('data', data);
+                        repo.saveAs('blob', data, function (err, hash) {
                             if (err) return grump(err);
                             lastHash = hash;
                             res.setHeader('Content-Type', 'text/html');
                             res.end(markdown.toHTML(data.toString()) + '\n');
-                            finish();
+                            finish(null, hash);
                         });
                     }));
                 } else {
@@ -66,8 +65,9 @@ require('http').createServer(function (req, res) {
                 res.end();
                 finish();
             }
+        }, function (err, hash) {
+            console.log('commit tree', err ? err.stack : err, hash);
         });
-
     });
 
     function grump(err) {
