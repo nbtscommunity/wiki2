@@ -23,7 +23,6 @@ module.exports = function pathWalk(hash, path, cb, up) {
         function finish (err, replacement) {
             if (err) return up(err);
             if (replacement) {
-                console.log('boom', arguments, obj, hash, replacement, obj.body[obj.body.indexOf(ent)]);
                 obj.body[obj.body.indexOf(ent)].hash = replacement;
                 self.saveAs('tree', obj.body, function (err, hash) {
                     if (err) return up(err);
