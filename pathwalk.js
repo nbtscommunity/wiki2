@@ -15,23 +15,22 @@ module.exports = function pathWalk(hash, path, cb, up) {
         if (!path[0]) return cb(null, obj, up);
 
         if (obj.type == 'tree' && (ent = find(obj.body, function (e) { return e.name == path[0]; }))) {
-            return pathWalk.call(self, ent.hash, path.slice(1), cb, finish);
+            return pathWalk.call(self, ent.hash, path.slice(1), cb, function finish (err, replacement) {
+                if (err) return up(err);
+                if (replacement) {
+                    obj.body[obj.body.indexOf(ent)].hash = replacement;
+                    self.saveAs('tree', obj.body, function (err, hash) {
+                        if (err) return up(err);
+                        up(null, hash);
+                    });
+                } else {
+                    up();
+                }
+            });
         } else {
             return cb("ENOENT");
         }
 
-        function finish (err, replacement) {
-            if (err) return up(err);
-            if (replacement) {
-                obj.body[obj.body.indexOf(ent)].hash = replacement;
-                self.saveAs('tree', obj.body, function (err, hash) {
-                    if (err) return up(err);
-                    up(null, hash);
-                });
-            } else {
-                up();
-            }
-        }
     });
 };
 
