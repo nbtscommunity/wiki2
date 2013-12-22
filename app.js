@@ -12,7 +12,7 @@ var wrap = require('./wrap');
 var http = require('http');
 var tee = require('pull-tee');
 
-wrap(repo, 'HEAD', function (err, fs) {
+wrap(repo, 'master', function (err, fs) {
     if (err) throw err;
 
     http.createServer(function (req, res) {

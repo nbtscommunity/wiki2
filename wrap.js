@@ -26,30 +26,50 @@ module.exports = function wrap(repo, ref, cb) {
             },
 
             createWriteStream: function (path) {
-                var s = new stream.PassThrough();
-
-                s.pipe(concat(function (data) {
+                return concat(function (data, done) {
                     pathWalk.call(repo, root, path, function (err, obj, finish) {
                         if (err) return s.emit('error', err);
                         if (obj.type == 'blob') {
                             repo.saveAs('blob', data, function (err, hash) {
                                 if (err) return s.emit('error', err);
-                                finish(null, data);
+                                finish(null, hash);
                             });
                         } else {
                             s.emit('error', 'EISDIR');
                         }
                     }, function (err, hash) {
                         if (err) return s.emit('error', err);
-                        root = hash;
+                        head.body.tree = root = hash;
+                        done();
                     });
-                }));
-
-                return s;
+                });
             },
 
-            commit: function (message) {
-                console.log('commit with hash', root);
+            commit: function (message, cb) {
+                repo.resolve(ref, function (err, lastCommit) { // FIXME: this should be cached, and merge warnings issued if it's not fast forward.
+                    if (err) return cb(err);
+                    repo.saveAs('commit', {
+                        tree: root,
+                        parents: [lastCommit],
+                        author: {
+                            name: "Aria Stewart",
+                            email: "aredridel@nbtsc.org",
+                            date: new Date()
+                        },
+                        committer: {
+                            name: "Aria Stewart",
+                            email: "aredridel@nbtsc.org", 
+                            date: new Date()
+                        },
+                        message: message
+                    }, function (err, hash) {
+                        if (err) return cb(err);
+                        repo.writeRef('refs/heads/' + ref, hash, function (err) {
+                            if (err) return cb(err);
+                            console.log('commit with message', message, 'tree', root, 'gives', hash);
+                        });
+                    });
+                });
             }
         });
     });
