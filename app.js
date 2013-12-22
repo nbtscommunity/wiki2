@@ -8,7 +8,7 @@ var util = require('util');
 var url = require('url');
 var markdown = require( "markdown" ).markdown;
 var concat = require('concat-stream');
-var wrap = require('./wrap');
+var wrap = require('js-git-as-fs');
 var http = require('http');
 var tee = require('pull-tee');
 
