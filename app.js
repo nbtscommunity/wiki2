@@ -21,25 +21,30 @@ wrap(repo, 'master', function (err, fs) {
         if (req.cgiHeaders && req.cgiHeaders.SCRIPT_NAME) u.pathname = u.path = u.href = u.href.replace(new RegExp('^' + req.cgiHeaders.SCRIPT_NAME), '');
 
         if (req.method.toUpperCase() == 'GET') {
-            fs.createReadStream(u.pathname).pipe(concat(function (data) {
-                res.setHeader('Content-Type', 'text/html');
-                res.end(markdown.toHTML(data.toString()) + '\n');
-            })).on('error', grump);
+            get();
         } else {
             req.pipe(concat(function (data) {
+                fs.createWriteStream(u.pathname).on('end', function () {
+                    fs.commit('BOOM', function (err) {
+                        if (err) return grump(err);
+                        get();
+                    });
+                }).on('error', grump).end(data);
+            })).on('error', grump);
+        }
+
+        function grump(err) {
+            res.setHeader('Content-Type', 'text/plain');
+            res.statusCode = 500;
+            res.end(err instanceof Error ? err.stack : util.inspect(err));
+        }
+
+        function get(pathname) {
+            fs.createReadStream(u.pathname).on('error', grump).pipe(concat(function (data) {
                 res.setHeader('Content-Type', 'text/html');
                 res.end(markdown.toHTML(data.toString()) + '\n');
-                fs.createWriteStream(u.pathname).on('end', function () {
-                    fs.commit('BOOM');
-                }).end(data);
             })).on('error', grump);
         }
     }).listen(5000);
-
-    function grump(err) {
-        res.setHeader('Content-Type', 'text/plain');
-        res.statusCode = 500;
-        res.end(err instanceof Error ? err.stack : util.inspect(err));
-    }
 });
 
