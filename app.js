@@ -25,9 +25,11 @@ wrap(repo, 'master', function (err, fs) {
         } else {
             req.pipe(concat(function (data) {
                 fs.createWriteStream(u.pathname).on('end', function () {
-                    fs.commit('BOOM');
-                    get();
-                }).on('error', grump).end('data')
+                    fs.commit('BOOM', function (err) {
+                        if (err) return grump(err);
+                        get();
+                    });
+                }).on('error', grump).end(data);
             })).on('error', grump);
         }
 
