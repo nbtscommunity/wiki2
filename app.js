@@ -6,11 +6,12 @@ var repo = jsGit(fsDb(platform.fs('pages.git')));
 
 var util = require('util');
 var url = require('url');
-var markdown = require( "markdown" ).markdown;
+var marked = require("marked");
 var concat = require('concat-stream');
 var wrap = require('js-git-as-fs');
 var http = require('http');
 var tee = require('pull-tee');
+var stream = require('stream');
 
 wrap(repo, 'master', function (err, fs) {
     if (err) throw err;
@@ -40,11 +41,14 @@ wrap(repo, 'master', function (err, fs) {
         }
 
         function get(pathname) {
+            var p = new stream.PassThrough();
+            res.setHeader('Content-Type', 'text/html');
             fs.createReadStream(u.pathname).on('error', grump).pipe(concat(function (data) {
-                res.setHeader('Content-Type', 'text/html');
-                res.end(markdown.toHTML(data.toString()) + '\n');
+                p.end(marked(data.toString()));
             })).on('error', grump);
+
+            p.pipe(res).on('error', grump);
+            return p;
         }
     }).listen(5000);
 });
-
