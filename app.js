@@ -12,6 +12,7 @@ var wrap = require('js-git-as-fs');
 var http = require('http');
 var tee = require('pull-tee');
 var stream = require('stream');
+var accepts = require('accepts');
 
 wrap(repo, 'master', function (err, fs) {
     if (err) throw err;
@@ -43,12 +44,17 @@ wrap(repo, 'master', function (err, fs) {
         function get(pathname) {
             var p = new stream.PassThrough();
             res.setHeader('Content-Type', 'text/html');
-            fs.createReadStream(u.pathname).on('error', grump).pipe(concat(function (data) {
-                p.end(marked(data.toString()));
-            })).on('error', grump);
+            var type = accepts(req).types('text/html', 'text/markdown');
+            if (type == 'text/markdown') {
+                return fs.createReadStream(u.pathname).on('error', grump).pipe(res);
+            } else {
+                fs.createReadStream(u.pathname).on('error', grump).pipe(concat(function (data) {
+                    p.end(marked(data.toString()));
+                })).on('error', grump);
+                p.pipe(res).on('error', grump);
+                return p;
+            }
 
-            p.pipe(res).on('error', grump);
-            return p;
         }
     }).listen(5000);
 });

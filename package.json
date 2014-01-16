@@ -11,7 +11,8 @@
     "git-fs-db": "~0.2.0",
     "git-node-platform": "~0.1.4",
     "pull-tee": "~2.0.0",
-    "marked": "~0.3.0"
+    "marked": "~0.3.0",
+    "accepts": "~1.0.0"
   },
   "author": "Aria Stewart <aredridel@nbtsc.org>",
   "license": "BSD-2-Clause"
