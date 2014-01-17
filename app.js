@@ -12,7 +12,9 @@ var wrap = require('js-git-as-fs');
 var http = require('http');
 var tee = require('pull-tee');
 var stream = require('stream');
+var duplexer = require('duplexer');
 var accepts = require('accepts');
+var hyperstream = require('hyperstream');
 
 wrap(repo, 'master', function (err, fs) {
     if (err) throw err;
@@ -43,18 +45,36 @@ wrap(repo, 'master', function (err, fs) {
 
         function get(pathname) {
             var p = new stream.PassThrough();
-            res.setHeader('Content-Type', 'text/html');
             var type = accepts(req).types('text/html', 'text/markdown');
             if (type == 'text/markdown') {
-                return fs.createReadStream(u.pathname).on('error', grump).pipe(res);
+                res.setHeader('Content-Type', type);
+                return fs.createReadStream(u.pathname).on('error', grump).pipe(p);
             } else {
-                fs.createReadStream(u.pathname).on('error', grump).pipe(concat(function (data) {
-                    p.end(marked(data.toString()));
-                })).on('error', grump);
-                p.pipe(res).on('error', grump);
-                return p;
-            }
+                res.setHeader('Content-Type', 'text/html');
+                var h = hyperstream({
+                    '#body': fs.createReadStream(u.pathname).pipe(markedStream())
+                });
 
+                h.pipe(p);
+
+                var i = fs.createReadStream('/layout.html').on('error', function () {
+                    console.log('Use fallback');
+                    h.end('<div id="body"></div>');
+                }).on('open', function() {
+                    console.log('Use layout in repo');
+                    i.pipe(h);
+                });
+            }
+            p.pipe(res).on('error', grump);
+            return p;
         }
     }).listen(5000);
 });
+
+function markedStream() {
+    var p = new stream.PassThrough();
+
+    return duplexer(concat(function (data) {
+        p.end(marked(data.toString()));
+    }), p);
+}
