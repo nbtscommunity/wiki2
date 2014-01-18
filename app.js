@@ -52,7 +52,7 @@ wrap(repo, 'master', function (err, fs) {
             } else {
                 res.setHeader('Content-Type', 'text/html');
                 var h = hyperstream({
-                    '#body': fs.createReadStream(u.pathname).pipe(markedStream())
+                    '#body': fs.createReadStream(u.pathname).on('error', grump).pipe(markedStream())
                 });
 
                 h.pipe(p);
