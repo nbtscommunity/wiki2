@@ -48,7 +48,15 @@ wrap(repo, 'master', function (err, fs) {
             var type = accepts(req).types('text/html', 'text/markdown');
             if (type == 'text/markdown') {
                 res.setHeader('Content-Type', type);
-                return fs.createReadStream(u.pathname).on('error', grump).pipe(p);
+                return fs.createReadStream(u.pathname).on('error', function (err) {
+                    if (err.code == 'ENOENT') {
+                        res.statusCode = 404;
+                        p.end('');
+                    } else {
+                        res.statusCode = 500;
+                        p.end(JSON.stringify(err));
+                    }
+                }).pipe(p);
             } else {
                 res.setHeader('Content-Type', 'text/html');
                 var h = hyperstream({
