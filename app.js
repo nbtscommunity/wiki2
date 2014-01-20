@@ -52,18 +52,14 @@ wrap(repo, 'master', function (err, fs) {
             } else {
                 res.setHeader('Content-Type', 'text/html');
                 var h = hyperstream({
-                    '#body': fs.createReadStream(u.pathname).on('error', grump).pipe(markedStream())
+                    '#body': fallbackStream(fs.createReadStream(u.pathname), write("Page not found")).on('fallback', function () {
+                        res.statusCode = 404;
+                    }).pipe(markedStream())
                 });
 
                 h.pipe(p);
 
-                var i = fs.createReadStream('/layout.html').on('error', function () {
-                    console.log('Use fallback');
-                    h.end('<div id="body"></div>');
-                }).on('open', function() {
-                    console.log('Use layout in repo');
-                    i.pipe(h);
-                });
+                fallbackStream(fs.createReadStream('/layout.html'), write('<div id="body"></div>')).pipe(h);
             }
             p.pipe(res).on('error', grump);
             return p;
@@ -77,4 +73,21 @@ function markedStream() {
     return duplexer(concat(function (data) {
         p.end(marked(data.toString()));
     }), p);
+}
+
+function fallbackStream(main, fallback) {
+    var p = new stream.PassThrough();
+    main.on('open', function () {
+        main.pipe(p);
+    }).on('error', function () {
+        p.emit('fallback');
+        fallback.pipe(p);
+    });
+    return p;
+}
+
+function write(str) {
+    var p = new stream.PassThrough();
+    p.end(str);
+    return p;
 }
