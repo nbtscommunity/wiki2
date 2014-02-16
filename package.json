@@ -16,6 +16,9 @@
     "accepts": "~1.0.0",
     "duplexer": "~0.1.1"
   },
+  "scripts": {
+    "start": "./app.js"
+  },
   "author": "Aria Stewart <aredridel@nbtsc.org>",
   "license": "BSD-2-Clause"
 }

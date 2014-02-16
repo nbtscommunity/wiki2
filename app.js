@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 var platform = require('git-node-platform');
 var fsDb = require('git-fs-db')(platform);
 var jsGit = require('js-git');
